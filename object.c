@@ -67,12 +67,16 @@ void init_bullet(Bullet *bullet, int start_x, int start_y, int direction)
     bullet->active = ACTIVE;
 }
 
-void move_bullet(Bullet *bullet)
+void move_bullet(Bullet *bullet, Player *player)
 {
     if (!bullet->active)
     {
         return; // Skip if the bullet is inactive
     }
+
+    // Store the old position
+    int old_x = bullet->x;
+    int old_y = bullet->y;
 
     // Move the bullet based on its direction
     switch (bullet->direction)
@@ -110,6 +114,24 @@ void move_bullet(Bullet *bullet)
     {
         bullet->y = 0;
     }
+
+    // Check intermediate positions for collision
+    int dx = bullet->x - old_x;
+    int dy = bullet->y - old_y;
+    int steps = (abs(dx) > abs(dy)) ? abs(dx) : abs(dy);
+
+    for (int i = 1; i <= steps; i++)
+    {
+        int intermediate_x = (old_x + (i * dx) / steps + SCREEN_WIDTH) % SCREEN_WIDTH;
+        int intermediate_y = (old_y + (i * dy) / steps + SCREEN_HEIGHT) % SCREEN_HEIGHT;
+
+        if (is_bullet_shoot_intermediate(intermediate_x, intermediate_y, player))
+        {
+            player->alive = DEAD;
+            bullet->active = DEAD;
+            return;
+        }
+    }
 }
 
 int is_bullet_shoot(const Bullet *bullet, const Player *player)
@@ -119,4 +141,13 @@ int is_bullet_shoot(const Bullet *bullet, const Player *player)
         return 0;
     }
     return (bullet->x == player->x && bullet->y == player->y);
+}
+
+int is_bullet_shoot_intermediate(int x, int y, const Player *player)
+{
+    if (!player->alive)
+    {
+        return 0;
+    }
+    return (x == player->x && y == player->y);
 }

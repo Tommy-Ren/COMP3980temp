@@ -2,12 +2,7 @@
 // Created by tommy on 11/25/24.
 //
 #include "network.h"
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <arpa/inet.h>
-#include <sys/socket.h>
+
 
 // Static variables for network
 static int sockfd;

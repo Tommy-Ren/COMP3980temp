@@ -1,6 +1,8 @@
 #ifndef OBJECT_H
 #define OBJECT_H
 
+#include <stdlib.h>
+
 // Screen size
 #define SCREEN_WIDTH 80
 #define SCREEN_HEIGHT 24
@@ -38,7 +40,8 @@ void update_player_position(Player *player, char input);
 void wrap_player_position(Player *player);
 
 void init_bullet(Bullet *bullet, int start_x, int start_y, int direction);
-void move_bullet(Bullet *bullet);
+void move_bullet(Bullet *bullet, Player *player);
 int is_bullet_shoot(const Bullet *bullet, const Player *player);
+int is_bullet_shoot_intermediate(int x, int y, const Player *player);
 
 #endif // OBJECT_H

@@ -6,6 +6,12 @@
 #define NETWORK_H
 
 #include "object.h"
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
 
 #define PORT 12345
 #define BUFFER_SIZE (sizeof(Player) + MAX_BULLETS * sizeof(Bullet))

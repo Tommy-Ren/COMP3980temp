@@ -92,10 +92,10 @@ void start_game(bool is_server, const char *ip_address)
     // Check game-ending conditions
     if (local_player.alive != ACTIVE)
     {
-        printf("Remoate player wins!\n");
+        printf("Remote player wins!\n");
         running = 0;
     }
-    else if (local_player.alive != ACTIVE)
+    else if (remote_player.alive != ACTIVE)
     {
         printf("Local player wins!\n");
         running = 0;
@@ -134,7 +134,7 @@ static void handle_bullets(Bullet bullets[], Player *opponent)
     {
         if (bullets[i].active)
         {
-            move_bullet(&bullets[i]);
+            move_bullet(&bullets[i], opponent);
             if (is_bullet_shoot(&bullets[i], opponent))
             {
                 opponent->alive = 0;   // Opponent is hit
