@@ -11,7 +11,9 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>     // For random input
+#include <SDL2/SDL.h> // For joystick handling
 
-void start_game(bool is_server, const char *ip_address);
+void start_game(bool is_server, const char *ip_address, char input_method);
 
 #endif // GAME_H

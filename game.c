@@ -10,8 +10,10 @@ static void handle_bullets(Bullet bullets[], Player *opponent);
 static void check_bullets_collide(Bullet bullets[]);
 static void shoot_bullet(Bullet bullets[], const Player *shooter);
 static int find_inactive_bullet(Bullet bullets[]);
+static char get_random_input();
+static char get_joystick_input(SDL_GameController *controller);
 
-void start_game(bool is_server, const char *ip_address)
+void start_game(bool is_server, const char *ip_address, char input_method)
 {
     // Initialize players
     Player local_player, remote_player;
@@ -36,6 +38,12 @@ void start_game(bool is_server, const char *ip_address)
     // Initialize network
     init_network(is_server, ip_address);
 
+    // Initialize random seed for random input
+    if (input_method == 'r')
+    {
+        srand(time(NULL)); // Seed random number generator
+    }
+
     // Initialize ncurses
     initscr();
     noecho();
@@ -43,10 +51,55 @@ void start_game(bool is_server, const char *ip_address)
     keypad(stdscr, TRUE);
     timeout(0); // Non-blocking input
 
+    // Initialize SDL for joystick input
+    SDL_GameController *controller = NULL;
+    if (input_method == 'j')
+    {
+        if (SDL_Init(SDL_INIT_GAMECONTROLLER) != 0)
+        {
+            fprintf(stderr, "SDL_Init Error: %s\n", SDL_GetError());
+            endwin();
+            return;
+        }
+
+        if (SDL_NumJoysticks() > 0)
+        {
+            controller = SDL_GameControllerOpen(0);
+            if (!controller)
+            {
+                fprintf(stderr, "Could not open game controller: %s\n", SDL_GetError());
+                SDL_Quit();
+                endwin();
+                return;
+            }
+        }
+        else
+        {
+            fprintf(stderr, "No game controllers connected.\n");
+            SDL_Quit();
+            endwin();
+            return;
+        }
+    }
+
     int running = ACTIVE;
     while (running)
     {
-        char input = getch();
+        char input = 0;
+        if (input_method == 'k')
+        {
+            // Get keyboard input
+            input = getch();
+        }
+        else if (input_method == 'j')
+        {
+            input = get_joystick_input(controller);
+        }
+        else if (input_method == 'r')
+        {
+            // Generate random input based on timer
+            input = get_random_input();
+        }
 
         if (input != 0)
         {
@@ -184,4 +237,53 @@ static int find_inactive_bullet(Bullet bullets[])
         }
     }
     return -1; // No inactive bullet found
+}
+
+static char get_random_input()
+{
+    static int counter = 0;
+    counter++;
+
+    if (counter % 10 == 0) // Change direction approximately every 500ms
+    {
+        int random_direction = rand() % 4;
+        switch (random_direction)
+        {
+        case 0:
+            return 'w'; // Up
+        case 1:
+            return 'a'; // Left
+        case 2:
+            return 's'; // Down
+        case 3:
+            return 'd'; // Right
+        }
+    }
+    return 0; // No movement for this frame
+}
+
+static char get_joystick_input(SDL_GameController *controller)
+{
+    SDL_Event event;
+    while (SDL_PollEvent(&event))
+    {
+        if (event.type == SDL_CONTROLLERAXISMOTION)
+        {
+            if (event.caxis.axis == SDL_CONTROLLER_AXIS_LEFTY)
+            {
+                if (event.caxis.value < -8000)
+                    return 'w'; // Up
+                if (event.caxis.value > 8000)
+                    return 's'; // Down
+            }
+            else if (event.caxis.axis == SDL_CONTROLLER_AXIS_LEFTX)
+            {
+                if (event.caxis.value < -8000)
+                    return 'a'; // Left
+                if (event.caxis.value > 8000)
+                    return 'd'; // Right
+            }
+        }
+    }
+    return 0;
 }

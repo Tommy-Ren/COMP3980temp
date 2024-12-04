@@ -9,17 +9,19 @@
 
 void print_usage(const char *program_name)
 {
-    printf("Usage: %s -s -a <ip_address> (server)\n", program_name);
-    printf("       %s -c -a <ip_address> (client)\n", program_name);
+    printf("Usage: %s -s -a <ip_address> [-i k|j|r] (server)\n", program_name);
+    printf("       %s -c -a <ip_address> [-i k|j|r] (client)\n", program_name);
+    printf("       -i: Input method (k = keyboard [default], j = joystick, r = random)\n");
 }
 
 int main(int argc, char *argv[])
 {
     bool is_server = -1; // -1 indicates uninitialized
     const char *ip_address = NULL;
+    char input_method = 'k';
 
     // Parse command-line arguments
-    if (argc == 4)
+    if (argc >= 4)
     {
         if (strcmp(argv[1], "-s") == 0)
         {
@@ -44,6 +46,20 @@ int main(int argc, char *argv[])
             print_usage(argv[0]);
             return EXIT_FAILURE;
         }
+
+        // Parse optional input method
+        if (argc == 6 && strcmp(argv[4], "-i") == 0)
+        {
+            if (argv[5][0] == 'k' || argv[5][0] == 'j' || argv[5][0] == 'r')
+            {
+                input_method = argv[5][0];
+            }
+            else
+            {
+                print_usage(argv[0]);
+                return EXIT_FAILURE;
+            }
+        }
     }
     else
     {
@@ -54,7 +70,7 @@ int main(int argc, char *argv[])
     // Start the game
     if (is_server == 1 || is_server == 0)
     {
-        start_game(is_server, ip_address);
+        start_game(is_server, ip_address, input_method);
     }
     else
     {

@@ -1,5 +1,5 @@
 game: game.c
-    gcc -o game main.c game.c object.c network.c -lncurses
+    gcc -o game main.c game.c object.c network.c -lSDL2 -lncurses -pthread
 
 clean:
     rm game
