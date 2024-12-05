@@ -10,7 +10,7 @@ static void handle_bullets(Bullet bullets[], Player *opponent);
 static void check_bullets_collide(Bullet bullets[]);
 static void shoot_bullet(Bullet bullets[], const Player *shooter);
 static int find_inactive_bullet(Bullet bullets[]);
-static char get_random_input();
+static char get_random_input(const Player *player1, const Player *player2, Bullet bullets[]);
 static char get_joystick_input(SDL_GameController *controller);
 static void get_socket(bool is_server, char *ip_address, in_port_t port, int *err);
 
@@ -99,7 +99,7 @@ void start_game(bool is_server, char *ip_address, in_port_t port, char *input_me
         else if (strcmp(input_method, "rd") == 0)
         {
             // Generate random input based on timer
-            input = get_random_input();
+            input = get_random_input(&local_player, &remote_player, bullets);
         }
 
         if (input != 0)
@@ -240,24 +240,34 @@ static int find_inactive_bullet(Bullet bullets[])
     return -1; // No inactive bullet found
 }
 
-static char get_random_input()
+static char get_random_input(const Player *player1, const Player *player2, Bullet bullets[])
 {
     static int counter = 0;
     counter++;
 
-    if (counter % 10 == 0) // Change direction approximately every 500ms
+    if (counter % 5 == 0)
     {
-        int random_direction = rand() % 4;
-        switch (random_direction)
+        // Check for shoot every 80 frames
+        if (counter % 80 == 0)
         {
-        case 0:
-            return 'w'; // Up
-        case 1:
-            return 'a'; // Left
-        case 2:
-            return 's'; // Down
-        case 3:
-            return 'd'; // Right
+            shoot_bullet(bullets, player1); // Player 1 shoots
+            shoot_bullet(bullets, player2); // Player 2 shoots
+        }
+        else
+        {
+            // Check for direction change every frames
+            int random_direction = rand() % 4; // Random direction (0-3)
+            switch (random_direction)
+            {
+            case 0:
+                return 'w'; // Up
+            case 1:
+                return 'a'; // Left
+            case 2:
+                return 's'; // Down
+            case 3:
+                return 'd'; // Right
+            }
         }
     }
     return 0; // No movement for this frame
