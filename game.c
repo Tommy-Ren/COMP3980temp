@@ -58,8 +58,8 @@ void start_game(bool is_server, char *ip_address, in_port_t port, char *input_me
     {
         if (SDL_Init(SDL_INIT_GAMECONTROLLER) != 0)
         {
-            fprintf(stderr, "SDL_Init Error: %s\n", SDL_GetError());
             endwin();
+            fprintf(stderr, "SDL_Init Error: %s\n", SDL_GetError());
             return;
         }
 
@@ -68,17 +68,17 @@ void start_game(bool is_server, char *ip_address, in_port_t port, char *input_me
             controller = SDL_GameControllerOpen(0);
             if (!controller)
             {
-                fprintf(stderr, "Could not open game controller: %s\n", SDL_GetError());
                 SDL_Quit();
                 endwin();
+                fprintf(stderr, "Could not open game controller: %s\n", SDL_GetError());
                 return;
             }
         }
         else
         {
-            fprintf(stderr, "No game controllers connected.\n");
             SDL_Quit();
             endwin();
+            fprintf(stderr, "No game controllers detected.\n");
             return;
         }
     }
@@ -266,10 +266,21 @@ static char get_random_input()
 static char get_joystick_input(SDL_GameController *controller)
 {
     SDL_Event event;
+    static int move_counter = 0;         // To handle overly sensitive joystick
+    static const int move_threshold = 2; // Adjust this value for responsiveness
+
     while (SDL_PollEvent(&event))
     {
         if (event.type == SDL_CONTROLLERAXISMOTION)
         {
+            // Increment the counter for motion events
+            move_counter++;
+            if (move_counter < move_threshold)
+            {
+                return 0; // Skip overly frequent events
+            }
+            move_counter = 0; // Reset counter after handling
+
             if (event.caxis.axis == SDL_CONTROLLER_AXIS_LEFTY)
             {
                 if (event.caxis.value < -8000)
@@ -283,6 +294,13 @@ static char get_joystick_input(SDL_GameController *controller)
                     return 'a'; // Left
                 if (event.caxis.value > 8000)
                     return 'd'; // Right
+            }
+        }
+        else if (event.type == SDL_CONTROLLERBUTTONDOWN)
+        {
+            if (event.cbutton.button == 0) // Button 0 (A button) for shooting
+            {
+                return ' '; // Space to shoot
             }
         }
     }
