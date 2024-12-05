@@ -23,10 +23,8 @@ struct options
     char *input;
 
     // For network socket
-    char *inaddress;
-    char *outaddress;
-    in_port_t inport;
-    in_port_t outport;
+    char *ip_address;
+    in_port_t port;
 };
 
 // Helper functions dealing with arguments
@@ -46,9 +44,8 @@ int main(int argc, char *argv[])
     err = 0;
     memset(&opts, 0, sizeof(opts));
 
-    // Set inport and outport value
-    opts.inport = PORT;
-    opts.outport = PORT;
+    // Set port value
+    opts.port = PORT;
 
     // Set default input method as keyboard
     opts.input = "kb";
@@ -60,11 +57,11 @@ int main(int argc, char *argv[])
     check_arguments(argv[0], &opts);
 
     // Start the game
-    if (opts.inaddress != NULL || opts.outaddress != NULL)
+    if (opts.ip_address != NULL)
     {
         if (is_server == 1 || is_server == 0)
         {
-            start_game(is_server, opts.inaddress, opts.inport, opts.input, &err);
+            start_game(is_server, opts.ip_address, opts.port, opts.input, &err);
         }
         else
         {
@@ -129,17 +126,14 @@ static void parse_arguments(int argc, char **argv, struct options *opts)
         // Get IP address
         case 'n':
         {
-            opts->inaddress = optarg;
-            opts->outaddress = optarg;
+            opts->ip_address = optarg;
             break;
         }
 
         // Get port
         case 'p':
         {
-            opts->inport = convertPort(optarg, &err);
-            opts->outport = convertPort(optarg, &err);
-
+            opts->port = convertPort(optarg, &err);
             if (err != ERR_NONE)
             {
                 usage(argv[0], EXIT_FAILURE, "Port most be between 0 and 65535");
