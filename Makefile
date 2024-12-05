@@ -4,5 +4,7 @@ game: game.c
 clean:
     rm game
     
-#./game -s -a 192.168.122.1
-#./game -c -a 192.168.122.1
+#./game -s -i kb|js|rd -n 192.168.1.104
+#./game -s -i kb -n 192.168.122.1
+#./game -c -i kb|js|rd -n 192.168.1.104
+#./game -c -i kb -n 192.168.122.1

@@ -1,82 +1,200 @@
 //
-// Created by tommy on 11/25/24.
+// Created by tommy and Kiet on 11/25/24.
 //
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <errno.h>
+#include <getopt.h>
+#include <netinet/in.h>
+#include <signal.h>
+#include <stdatomic.h>
 #include "game.h"
 
-void print_usage(const char *program_name)
+// Global variable
+static bool is_server;
+
+// Declare type of option
+struct options
 {
-    printf("Usage: %s -s -a <ip_address> [-i k|j|r] (server)\n", program_name);
-    printf("       %s -c -a <ip_address> [-i k|j|r] (client)\n", program_name);
-    printf("       -i: Input method (k = keyboard [default], j = joystick, r = random)\n");
-}
+    // For start game
+    bool client;
+    bool server;
+
+    // For user input
+    char *input;
+
+    // For network socket
+    char *inaddress;
+    char *outaddress;
+    in_port_t inport;
+    in_port_t outport;
+};
+
+// Helper functions dealing with arguments
+static void parse_arguments(int argc, char **argv, struct options *opts);
+_Noreturn static void usage(const char *program_name, int exit_code, const char *message);
+static void check_arguments(const char *program_name, const struct options *opts);
 
 int main(int argc, char *argv[])
 {
-    bool is_server = -1; // -1 indicates uninitialized
-    const char *ip_address = NULL;
-    char input_method = 'k';
+    // Initialize variable
+    struct options opts;
+    int fd;
+    int err;
+    is_server = -1;
 
-    // Parse command-line arguments
-    if (argc >= 4)
-    {
-        if (strcmp(argv[1], "-s") == 0)
-        {
-            is_server = 1;
-        }
-        else if (strcmp(argv[1], "-c") == 0)
-        {
-            is_server = 0;
-        }
-        else
-        {
-            print_usage(argv[0]);
-            return EXIT_FAILURE;
-        }
+    // Set each member of options to 0
+    err = 0;
+    memset(&opts, 0, sizeof(opts));
 
-        if (strcmp(argv[2], "-a") == 0)
-        {
-            ip_address = argv[3];
-        }
-        else
-        {
-            print_usage(argv[0]);
-            return EXIT_FAILURE;
-        }
+    // Set inport and outport value
+    opts.inport = PORT;
+    opts.outport = PORT;
 
-        // Parse optional input method
-        if (argc == 6 && strcmp(argv[4], "-i") == 0)
-        {
-            if (argv[5][0] == 'k' || argv[5][0] == 'j' || argv[5][0] == 'r')
-            {
-                input_method = argv[5][0];
-            }
-            else
-            {
-                print_usage(argv[0]);
-                return EXIT_FAILURE;
-            }
-        }
-    }
-    else
-    {
-        print_usage(argv[0]);
-        return EXIT_FAILURE;
-    }
+    // Set default input method as keyboard
+    opts.input = "kb";
+
+    // Sending data to the client
+    parse_arguments(argc, argv, &opts);
+
+    // Checking the _arguments of command-line
+    check_arguments(argv[0], &opts);
 
     // Start the game
-    if (is_server == 1 || is_server == 0)
+    if (opts.inaddress != NULL || opts.outaddress != NULL)
     {
-        start_game(is_server, ip_address, input_method);
+        if (is_server == 1 || is_server == 0)
+        {
+            start_game(is_server, opts.inaddress, opts.inport, opts.input, &err);
+        }
+        else
+        {
+            usage(argv[0], EXIT_FAILURE, "The game must be run as SERVER OR CLIENT");
+        }
     }
     else
     {
-        print_usage(argv[0]);
-        return EXIT_FAILURE;
+        usage(argv[0], EXIT_FAILURE, "No passing IP Address");
     }
 
     return EXIT_SUCCESS;
+}
+
+// Function to parsing command-line _arguments
+static void parse_arguments(int argc, char **argv, struct options *opts)
+{
+    // Define option type
+    static struct option long_options[] = {
+        {"server", no_argument, NULL, 's'},
+        {"client", no_argument, NULL, 'c'},
+        {"input", required_argument, NULL, 'i'},
+        {"address", required_argument, NULL, 'n'},
+        {"fd", required_argument, NULL, 'p'},
+        {"help", no_argument, NULL, 'h'},
+        {NULL, 0, NULL, 0}};
+
+    // Parsing command-line _arguments
+    int opt;
+    int err;
+    opterr = 0;
+    while ((opt = getopt_long(argc, argv, "hcsi:n:p:", long_options, NULL)) != -1)
+    {
+        switch (opt)
+        {
+        // To get which type to start game
+        case 'c':
+        {
+            opts->client = true;
+            is_server = 0;
+            break;
+        }
+
+        case 's':
+        {
+            opts->server = true;
+            is_server = 1;
+            break;
+        }
+
+        // Get user input type (keyboard, console or random)
+        case 'i':
+        {
+            opts->input = optarg;
+            if (strcmp(opts->input, "kb") != 0 && strcmp(opts->input, "js") != 0 && strcmp(opts->input, "rd") != 0)
+            {
+                usage(argv[0], EXIT_FAILURE, "Invalid user input");
+            }
+            break;
+        }
+
+        // Get IP address
+        case 'n':
+        {
+            opts->inaddress = optarg;
+            opts->outaddress = optarg;
+            break;
+        }
+
+        // Get port
+        case 'p':
+        {
+            opts->inport = convertPort(optarg, &err);
+            opts->outport = convertPort(optarg, &err);
+
+            if (err != ERR_NONE)
+            {
+                usage(argv[0], EXIT_FAILURE, "Port most be between 0 and 65535");
+            }
+            break;
+        }
+
+        case 'h':
+            usage(argv[0], EXIT_SUCCESS, "How to use program");
+
+        default:
+            usage(argv[0], EXIT_FAILURE, "Invalid arguments");
+        }
+    }
+}
+
+// Function to print error message and program help
+_Noreturn static void usage(const char *program_name, int exit_code, const char *message)
+{
+    if (message)
+    {
+        fprintf(stderr, "%s\n", message);
+    }
+
+    fprintf(stderr, "Usage: %s [-h] [-c or -s] [-i <input>] [-n <address>] [-p <port>]\n", program_name);
+    fputs("Options:\n", stderr);
+    fputs("  -h, --help                           Display this help message\n", stderr);
+    fputs("  -c, --client                           Run the game as client\n", stderr);
+    fputs("  -s, --server                           Run the game as server\n", stderr);
+    fputs("  -i <input>, --input <input>  User input type <input>: 'kb' for keyboard, 'js' for joysticks or 'rd' for random moves\n", stderr);
+    fputs("  -n <address>, --address <address>  Create network socket <address>\n", stderr);
+    fputs("  -p <port>, --address <address>    Create port for network socket <port>\n", stderr);
+    exit(exit_code);
+}
+
+// Function to check number of input are passing through command-line
+static void check_arguments(const char *program_name, const struct options *opts)
+{
+    int count = 0;
+
+    // Check if user has run the game as client
+    if (opts->client == true)
+    {
+        count = count + 1;
+    }
+
+    // Check if user has run the game as server
+    if (opts->server == true)
+    {
+        count = count + 1;
+    }
+
+    // Check number of _arguments
+    if (count > 1)
+    {
+        usage(program_name, EXIT_FAILURE, "Only run game as Client OR Server at one time");
+    }
 }

@@ -1,5 +1,5 @@
 //
-// Created by tommy on 11/25/24.
+// Created by tommy and Kiet on 11/25/24.
 //
 
 #include "game.h"
@@ -12,8 +12,9 @@ static void shoot_bullet(Bullet bullets[], const Player *shooter);
 static int find_inactive_bullet(Bullet bullets[]);
 static char get_random_input();
 static char get_joystick_input(SDL_GameController *controller);
+static void get_socket(bool is_server, char *ip_address, in_port_t port, int *err);
 
-void start_game(bool is_server, const char *ip_address, char input_method)
+void start_game(bool is_server, char *ip_address, in_port_t port, char *input_method, int *err)
 {
     // Initialize players
     Player local_player, remote_player;
@@ -36,10 +37,10 @@ void start_game(bool is_server, const char *ip_address, char input_method)
     }
 
     // Initialize network
-    init_network(is_server, ip_address);
+    get_socket(is_server, ip_address, port, err);
 
     // Initialize random seed for random input
-    if (input_method == 'r')
+    if (strcmp(input_method, "rd") == 0)
     {
         srand(time(NULL)); // Seed random number generator
     }
@@ -53,7 +54,7 @@ void start_game(bool is_server, const char *ip_address, char input_method)
 
     // Initialize SDL for joystick input
     SDL_GameController *controller = NULL;
-    if (input_method == 'j')
+    if (strcmp(input_method, "js") == 0)
     {
         if (SDL_Init(SDL_INIT_GAMECONTROLLER) != 0)
         {
@@ -86,16 +87,16 @@ void start_game(bool is_server, const char *ip_address, char input_method)
     while (running)
     {
         char input = 0;
-        if (input_method == 'k')
+        if (strcmp(input_method, "kb") == 0)
         {
             // Get keyboard input
             input = getch();
         }
-        else if (input_method == 'j')
+        else if (strcmp(input_method, "js") == 0)
         {
             input = get_joystick_input(controller);
         }
-        else if (input_method == 'r')
+        else if (strcmp(input_method, "rd") == 0)
         {
             // Generate random input based on timer
             input = get_random_input();
@@ -286,4 +287,29 @@ static char get_joystick_input(SDL_GameController *controller)
         }
     }
     return 0;
+}
+
+// Function to get which type of input are passing through command-line
+static void get_socket(bool is_server, char *ip_address, in_port_t port, int *err)
+{
+
+    // Network socket server as type
+    if (ip_address != NULL)
+    {
+        // If the user choose server type
+        if (is_server == 1)
+        {
+            openNetworkSocketServer(ip_address, port, err);
+        }
+
+        // If the user choose client type
+        else if (is_server == 0)
+        {
+            openNetworkSocketClient(ip_address, port, err);
+        }
+    }
+    else
+    {
+        perror("IP Address is invalid");
+    }
 }
